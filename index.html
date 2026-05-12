@@ -297,8 +297,13 @@ async function getHabitLogs(date, force) {
 
 async function getVisionBoard(goalId, force) {
   if (!force && cache.visionBoard[goalId]) return cache.visionBoard[goalId];
+  if (!force) {
+    const s = localStorage.getItem(`vb_${goalId}`);
+    if (s) { cache.visionBoard[goalId] = JSON.parse(s); return cache.visionBoard[goalId]; }
+  }
   const d = await api('GET', `/sg/vision-board?goalId=${goalId}`);
   cache.visionBoard[goalId] = d.items || [];
+  localStorage.setItem(`vb_${goalId}`, JSON.stringify(cache.visionBoard[goalId]));
   return cache.visionBoard[goalId];
 }
 
