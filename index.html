@@ -234,7 +234,6 @@ async function getGoals(force) {
 async function getCheckins(goalId, force) {
   if (!force && cache.checkins[goalId]) return cache.checkins[goalId];
   const d = await api('GET', `/sg/checkins?goalId=${goalId}`);
-  console.log('[checkins]', goalId, d.checkins?.map(c => ({id:c.id,goalId:c.goalId,value:c.value})));
   cache.checkins[goalId] = (d.checkins || []).filter(c => {
     if (!c.goalId) return false;
     return c.goalId.replace(/-/g,'') === goalId.replace(/-/g,'');
