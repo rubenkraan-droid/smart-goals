@@ -315,8 +315,11 @@ async function showDashboard() {
   buildCatFilter();
   try {
     const goals = await getGoals();
-    // Silently pre-load checkins
-    goals.slice(0,8).forEach(g => getCheckins(g.id).catch(()=>{}));
+    // Silently pre-load checkins and vision boards
+    goals.slice(0,8).forEach(g => {
+      getCheckins(g.id).catch(()=>{});
+      getVisionBoard(g.id).catch(()=>{});
+    });
     renderGoalList(goals);
   } catch(e) {
     const el = document.getElementById('goalList');
