@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Smart Goals">
+<meta name="theme-color" content="#0a0a0a">
+<title>Smart Goals</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #141414;
+    --surface2: #1e1e1e;
+    --border: #2a2a2a;
+    --text: #f0f0f0;
+    --muted: #888;
+    --accent: #4f8ef7;
+    --green: #22c55e;
+    --red: #ef4444;
+    --yellow: #f59e0b;
+    --purple: #a855f7;
+    --pink: #ec4899;
+    --tab-h: 64px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100dvh; overflow-x: hidden; }
+  #app { max-width: 480px; margin: 0 auto; min-height: 100dvh; position: relative; }
+
+  /* Header */
+  .header { position: sticky; top: 0; z-index: 10; background: var(--bg); border-bottom: 1px solid var(--border); padding: 16px 20px 12px; display: flex; align-items: center; gap: 12px; }
+  .header h1 { font-size: 18px; font-weight: 700; flex: 1; }
+  .header .back-btn { background: none; border: none; color: var(--text); font-size: 22px; cursor: pointer; padding: 4px; line-height: 1; }
+  .header .icon-btn { background: none; border: none; color: var(--text); font-size: 20px; cursor: pointer; padding: 4px 8px; line-height: 1; }
+
+  /* Bottom tabs */
+  .tabs { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; height: var(--tab-h); background: var(--surface); border-top: 1px solid var(--border); display: flex; z-index: 20; padding-bottom: env(safe-area-inset-bottom); }
+  .tab { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border: none; background: none; color: var(--muted); font-size: 10px; font-weight: 600; cursor: pointer; text-transform: uppercase; letter-spacing: .5px; transition: color .15s; }
+  .tab.active { color: var(--accent); }
+  .tab .tab-icon { font-size: 22px; line-height: 1; }
+
+  /* Scroll area */
+  .scroll { padding: 16px 20px calc(var(--tab-h) + 24px); }
+
+  /* Cards */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 12px; }
+  .card-tap { cursor: pointer; transition: background .1s; }
+  .card-tap:active { background: var(--surface2); }
+
+  /* Category badge */
+  .badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 99px; text-transform: uppercase; letter-spacing: .5px; }
+
+  /* Progress bar */
+  .progress-wrap { background: var(--border); border-radius: 99px; height: 6px; margin: 10px 0; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 99px; transition: width .4s ease; }
+
+  /* Buttons */
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: none; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; padding: 12px 20px; transition: opacity .15s, transform .1s; }
+  .btn:active { transform: scale(.97); }
+  .btn-primary { background: var(--accent); color: #fff; width: 100%; }
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-ghost { background: none; border: 1px solid var(--border); color: var(--muted); }
+  .btn-danger { background: #1a0808; color: var(--red); border: 1px solid #3a1010; }
+  .btn-sm { padding: 8px 14px; font-size: 13px; border-radius: 10px; }
+
+  /* FAB */
+  .fab { position: fixed; bottom: calc(var(--tab-h) + 16px); right: 20px; width: 56px; height: 56px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 28px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 20px rgba(79,142,247,.45); z-index: 15; transition: transform .15s; }
+  .fab:active { transform: scale(.93); }
+
+  /* Form */
+  .form-group { margin-bottom: 16px; }
+  label { display: block; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 6px; }
+  input, textarea, select { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-size: 15px; padding: 12px 14px; outline: none; transition: border-color .15s; font-family: inherit; appearance: none; -webkit-appearance: none; }
+  input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+  textarea { resize: none; min-height: 80px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  /* Section title */
+  .section-title { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; margin: 20px 0 8px; }
+
+  /* Stats row */
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 8px; text-align: center; }
+  .stat-val { font-size: 22px; font-weight: 800; line-height: 1.1; }
+  .stat-lbl { font-size: 10px; color: var(--muted); margin-top: 2px; text-transform: uppercase; letter-spacing: .4px; }
+
+  /* Modal / Bottom sheet */
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.75); z-index: 30; opacity: 0; pointer-events: none; transition: opacity .25s; }
+  .overlay.open { opacity: 1; pointer-events: all; }
+  .sheet { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%) translateY(100%); width: 100%; max-width: 480px; background: var(--surface); border-radius: 24px 24px 0 0; z-index: 31; padding: 0 20px calc(32px + env(safe-area-inset-bottom)); transition: transform .3s cubic-bezier(.32,0,.15,1); max-height: 92dvh; overflow-y: auto; }
+  .sheet.open { transform: translateX(-50%) translateY(0); }
+  .sheet-handle { width: 40px; height: 4px; background: var(--border); border-radius: 99px; margin: 16px auto 20px; }
+  .sheet h2 { font-size: 18px; font-weight: 700; margin-bottom: 20px; }
+
+  /* Category filter */
+  .cat-filter { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; -webkit-overflow-scrolling: touch; margin-bottom: 8px; }
+  .cat-filter::-webkit-scrollbar { display: none; }
+  .cat-chip { flex-shrink: 0; padding: 6px 14px; border-radius: 99px; font-size: 12px; font-weight: 600; border: 1px solid var(--border); background: none; color: var(--muted); cursor: pointer; transition: all .15s; }
+  .cat-chip.active { color: #fff; }
+
+  /* Loading skeleton */
+  .skeleton { background: linear-gradient(90deg, var(--surface) 25%, var(--surface2) 50%, var(--surface) 75%); background-size: 200% 100%; animation: shimmer 1.3s infinite; border-radius: 16px; }
+  @keyframes shimmer { to { background-position: -200% 0; } }
+  .sk-card { height: 110px; margin-bottom: 12px; }
+
+  /* Empty state */
+  .empty { text-align: center; padding: 48px 24px; color: var(--muted); }
+  .empty .icon { font-size: 48px; margin-bottom: 12px; }
+  .empty p { font-size: 14px; line-height: 1.6; }
+
+  /* Error */
+  .error-box { background: #150505; border: 1px solid #3a1010; border-radius: 12px; padding: 16px; text-align: center; color: var(--red); font-size: 14px; margin-bottom: 12px; }
+
+  /* Vision grid */
+  .vision-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .vision-item { aspect-ratio: 3/4; border-radius: 12px; overflow: hidden; position: relative; background: var(--surface2); }
+  .vision-item img { width: 100%; height: 100%; object-fit: cover; }
+  .vision-item .vcaption { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0,0,0,.85)); padding: 24px 8px 8px; font-size: 11px; font-weight: 600; }
+  .vision-add { aspect-ratio: 3/4; border-radius: 12px; border: 2px dashed var(--border); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: var(--muted); font-size: 12px; cursor: pointer; background: none; width: 100%; }
+  .vision-add .plus { font-size: 28px; }
+
+  /* AI advice */
+  .advice-box { background: linear-gradient(135deg, #060f1f, #050f0a); border: 1px solid #152040; border-radius: 16px; padding: 16px; }
+  .advice-text { font-size: 14px; line-height: 1.75; white-space: pre-wrap; color: #b8cee8; }
+  .advice-loading { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 14px; padding: 16px; }
+  .spinner { width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; flex-shrink: 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Habit row */
+  .habit-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .habit-row:last-child { border-bottom: none; }
+  .habit-check { width: 34px; height: 34px; border-radius: 50%; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; font-size: 16px; transition: all .2s; user-select: none; }
+  .habit-check.done { background: var(--green); border-color: var(--green); }
+  .habit-info { flex: 1; min-width: 0; }
+  .habit-name { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .habit-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .streak-badge { font-size: 12px; font-weight: 700; color: var(--yellow); }
+
+  /* Chart */
+  .chart-wrap { position: relative; height: 180px; margin: 4px 0; }
+
+  /* Checkin list */
+  .checkin-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .checkin-row:last-child { border-bottom: none; }
+  .checkin-date { font-size: 12px; color: var(--muted); }
+  .checkin-note { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .checkin-val { font-size: 16px; font-weight: 700; }
+
+  /* SMART rows */
+  .smart-row { margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+  .smart-row:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+  .smart-lbl { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 3px; }
+  .smart-val { font-size: 14px; line-height: 1.5; }
+
+  /* Divider */
+  .divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+  /* Week dots */
+  .week-strip { display: flex; gap: 4px; margin-top: 6px; }
+  .week-dot { flex: 1; height: 8px; border-radius: 4px; }
+  .week-labels { display: flex; gap: 4px; margin-top: 3px; }
+  .week-lbl { flex: 1; text-align: center; font-size: 9px; color: var(--muted); }
+
+  /* Category colors */
+  .cat-Health    { background: #041a0c; color: #22c55e; border-color: #0a3018; }
+  .cat-Business  { background: #060f1f; color: #4f8ef7; border-color: #0a2040; }
+  .cat-Finance   { background: #160d00; color: #f59e0b; border-color: #2e1c00; }
+  .cat-Personal  { background: #110620; color: #a855f7; border-color: #200a40; }
+  .cat-Spiritual { background: #1a0510; color: #ec4899; border-color: #300a20; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="view"></div>
+  <nav class="tabs">
+    <button class="tab active" id="tab-goals" onclick="switchTab('goals')">
+      <span class="tab-icon">🎯</span>Goals
+    </button>
+    <button class="tab" id="tab-habits" onclick="switchTab('habits')">
+      <span class="tab-icon">🔁</span>Habits
+    </button>
+  </nav>
+</div>
+
+<div class="overlay" id="overlay" onclick="closeSheet()"></div>
+<div class="sheet" id="sheet"></div>
+
+<script>
+const BASE = 'https://mabekra.app.n8n.cloud/webhook';
+const CATS = ['Health','Business','Finance','Personal','Spiritual'];
+const CAT_COLOR = { Health:'#22c55e', Business:'#4f8ef7', Finance:'#f59e0b', Personal:'#a855f7', Spiritual:'#ec4899' };
+const FREQS = ['Daily','Weekly','Monthly'];
+
+// ─── Cache ────────────────────────────────────────────────────────────────
+const cache = {
+  goals: null,
+  checkins: {},
+  habits: null,
+  habitLogs: {},
+  visionBoard: {}
+};
+
+// ─── State ────────────────────────────────────────────────────────────────
+let currentTab = 'goals';
+let currentGoalId = null;
+let filterCat = 'All';
+let habitDate = todayStr();
+let chartInst = null;
+
+function todayStr() {
+  return new Date().toISOString().slice(0,10);
+}
+
+// ─── API ──────────────────────────────────────────────────────────────────
+async function api(method, path, data) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (data) opts.body = JSON.stringify(data);
+  const res = await fetch(BASE + path, opts);
+  if (!res.ok) {
+    let body = '';
+    try { body = await res.text(); } catch(e) {}
+    throw new Error(`HTTP ${res.status} — ${body.slice(0, 300)}`);
+  }
+  return res.json();
+}
+
+async function getGoals(force) {
+  if (!force && cache.goals) return cache.goals;
+  const d = await api('GET', '/sg/goals');
+  cache.goals = d.goals || [];
+  return cache.goals;
+}
+
+async function getCheckins(goalId, force) {
+  if (!force && cache.checkins[goalId]) return cache.checkins[goalId];
+  const d = await api('GET', `/sg/checkins?goalId=${goalId}`);
+  cache.checkins[goalId] = d.checkins || [];
+  return cache.checkins[goalId];
+}
+
+async function getHabits(force) {
+  if (!force && cache.habits) return cache.habits;
+  const d = await api('GET', '/sg/habits');
+  cache.habits = d.habits || [];
+  return cache.habits;
+}
+
+async function getHabitLogs(date, force) {
+  if (!force && cache.habitLogs[date]) return cache.habitLogs[date];
+  const d = await api('GET', `/sg/habit-logs?date=${date}`);
+  cache.habitLogs[date] = d.logs || [];
+  return cache.habitLogs[date];
+}
+
+async function getVisionBoard(goalId, force) {
+  if (!force && cache.visionBoard[goalId]) return cache.visionBoard[goalId];
+  const d = await api('GET', `/sg/vision-board?goalId=${goalId}`);
+  cache.visionBoard[goalId] = d.items || [];
+  return cache.visionBoard[goalId];
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────
+function pct(goal, checkins) {
+  if (!checkins || !checkins.length) return 0;
+  const sorted = [...checkins].sort((a,b) => a.date < b.date ? -1 : 1);
+  const latest = sorted[sorted.length - 1]?.value ?? goal.startValue;
+  const range = goal.targetValue - goal.startValue;
+  if (!range) return 0;
+  return Math.min(100, Math.max(0, Math.round(((latest - goal.startValue) / range) * 100)));
+}
+
+function daysLeft(endDate) {
+  return Math.max(0, Math.ceil((new Date(endDate) - new Date()) / 86400000));
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function catBadge(cat) {
+  return `<span class="badge cat-${cat}">${cat}</span>`;
+}
+
+function sk(n) {
+  return Array(n).fill('<div class="skeleton sk-card"></div>').join('');
+}
+
+function errBox(msg, fn) {
+  return `<div class="error-box">${esc(msg)}<br><button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="${fn}">↻ Retry</button></div>`;
+}
+
+// ─── Tab switch ───────────────────────────────────────────────────────────
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+  document.getElementById(`tab-${tab}`).classList.add('active');
+  if (chartInst) { chartInst.destroy(); chartInst = null; }
+  if (tab === 'goals') showDashboard();
+  else showHabits();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// GOALS DASHBOARD
+// ═══════════════════════════════════════════════════════════════════════════
+async function showDashboard() {
+  if (chartInst) { chartInst.destroy(); chartInst = null; }
+  document.getElementById('view').innerHTML = `
+    <div class="header"><h1>🎯 Smart Goals</h1></div>
+    <div class="scroll">
+      <div class="cat-filter" id="catFilter"></div>
+      <div id="goalList">${sk(3)}</div>
+    </div>
+    <button class="fab" onclick="showNewGoal()">+</button>
+  `;
+  buildCatFilter();
+  try {
+    const goals = await getGoals();
+    // Silently pre-load checkins
+    goals.slice(0,8).forEach(g => getCheckins(g.id).catch(()=>{}));
+    renderGoalList(goals);
+  } catch(e) {
+    const el = document.getElementById('goalList');
+    if (el) el.innerHTML = errBox('Could not load goals', 'showDashboard()');
+  }
+}
+
+function buildCatFilter() {
+  const el = document.getElementById('catFilter');
+  if (!el) return;
+  ['All', ...CATS].forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'cat-chip' + (c === filterCat ? ' active' : '');
+    btn.textContent = c;
+    if (c === filterCat) {
+      if (c === 'All') { btn.style.cssText = 'background:var(--surface2);border-color:var(--accent);color:var(--accent)'; }
+      else { const col = CAT_COLOR[c]; btn.style.cssText = `background:${col}22;border-color:${col};color:${col}`; }
+    }
+    btn.onclick = () => { filterCat = c; buildCatFilter(); if (cache.goals) renderGoalList(cache.goals); };
+    el.appendChild(btn);
+  });
+}
+
+function renderGoalList(goals) {
+  const el = document.getElementById('goalList');
+  if (!el) return;
+  const list = filterCat === 'All' ? goals : goals.filter(g => g.category === filterCat);
+  if (!list.length) {
+    el.innerHTML = `<div class="empty"><div class="icon">🎯</div><p>No goals yet.<br>Tap + to create your first goal.</p></div>`;
+    return;
+  }
+  el.innerHTML = list.map(g => {
+    const ci = cache.checkins[g.id];
+    const p = pct(g, ci);
+    const dl = daysLeft(g.endDate);
+    const sorted = ci ? [...ci].sort((a,b)=>a.date<b.date?-1:1) : [];
+    const latest = sorted.length ? (sorted[sorted.length-1]?.value ?? g.startValue) : g.startValue;
+    const col = CAT_COLOR[g.category] || '#4f8ef7';
+    return `
+      <div class="card card-tap" onclick="showGoalDetail('${g.id}')">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+          <div style="flex:1;min-width:0">
+            ${catBadge(g.category)}
+            <div style="font-size:16px;font-weight:700;margin-top:6px;line-height:1.3">${esc(g.title)}</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;padding-top:4px">
+            <div style="font-size:24px;font-weight:800;color:${col};line-height:1">${p}%</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">${dl}d left</div>
+          </div>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-fill" style="width:${p}%;background:${col}"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted)">
+          <span>${g.startValue} → <strong style="color:var(--text)">${latest}</strong> / ${g.targetValue}${g.unit ? ' '+esc(g.unit) : ''}</span>
+          <span>${ci ? ci.length + ' logs' : '…'}</span>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// GOAL DETAIL
+// ═══════════════════════════════════════════════════════════════════════════
+async function showGoalDetail(goalId) {
+  currentGoalId = goalId;
+  if (chartInst) { chartInst.destroy(); chartInst = null; }
+  document.getElementById('view').innerHTML = `
+    <div class="header">
+      <button class="back-btn" onclick="showDashboard()">←</button>
+      <h1>Goal</h1>
+    </div>
+    <div class="scroll" id="detailBody">${sk(4)}</div>
+  `;
+  try {
+    const [goals, checkins, vision] = await Promise.all([
+      getGoals(), getCheckins(goalId), getVisionBoard(goalId)
+    ]);
+    const goal = goals.find(g => g.id === goalId);
+    if (!goal) throw new Error('Not found');
+    renderDetail(goal, checkins, vision);
+  } catch(e) {
+    document.getElementById('detailBody').innerHTML = errBox('Could not load goal', `showGoalDetail('${goalId}')`);
+  }
+}
+
+function renderDetail(goal, checkins, vision) {
+  const el = document.getElementById('detailBody');
+  if (!el) return;
+  const col = CAT_COLOR[goal.category] || '#4f8ef7';
+  const p = pct(goal, checkins);
+  const dl = daysLeft(goal.endDate);
+  const sorted = [...checkins].sort((a,b) => a.date < b.date ? -1 : 1);
+  const latest = sorted.length ? (sorted[sorted.length-1]?.value ?? goal.startValue) : goal.startValue;
+
+  el.innerHTML = `
+    <div class="card" style="border-color:${col}44">
+      ${catBadge(goal.category)}
+      <h2 style="font-size:19px;margin:8px 0 14px;line-height:1.35">${esc(goal.title)}</h2>
+      <div class="progress-wrap">
+        <div class="progress-fill" style="width:${p}%;background:${col}"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--muted)">
+        <span>${goal.startValue} → <strong style="color:var(--text)">${latest}</strong> / ${goal.targetValue}${goal.unit?' '+esc(goal.unit):''}</span>
+        <span style="color:${col};font-weight:700">${p}%</span>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="stat-val" style="color:${col}">${p}%</div><div class="stat-lbl">Progress</div></div>
+      <div class="stat"><div class="stat-val">${dl}</div><div class="stat-lbl">Days left</div></div>
+      <div class="stat"><div class="stat-val">${sorted.length}</div><div class="stat-lbl">Check-ins</div></div>
+    </div>
+
+    <button class="btn btn-primary" onclick="openCheckinSheet('${goal.id}')">+ Log Check-in</button>
+
+    ${sorted.length > 1 ? `
+      <div class="section-title">Progress Chart</div>
+      <div class="card"><div class="chart-wrap"><canvas id="goalChart"></canvas></div></div>
+    ` : ''}
+
+    <div class="section-title">SMART Breakdown</div>
+    <div class="card">
+      ${smartRow('Specific', goal.specific)}
+      ${smartRow('Measurable', `${goal.startValue} → ${goal.targetValue}${goal.unit?' '+goal.unit:''}`)}
+      ${smartRow('Achievable', goal.achievable)}
+      ${smartRow('Relevant', goal.relevant)}
+      ${smartRow('Time-bound', `${goal.startDate} → ${goal.endDate}`)}
+    </div>
+
+    <div class="section-title">AI Coach</div>
+    <div id="aiSection">
+      ${goal.aiAdvice
+        ? `<div class="advice-box"><div class="advice-text">${esc(goal.aiAdvice)}</div></div>
+           <button class="btn btn-ghost btn-sm" style="margin-top:10px;width:100%" onclick="loadAIAdvice('${goal.id}')">↻ New Advice</button>`
+        : `<button class="btn btn-secondary" style="width:100%" onclick="loadAIAdvice('${goal.id}')">✨ Get AI Coaching Advice</button>`}
+    </div>
+
+    ${sorted.length ? `
+      <div class="section-title">Check-in History</div>
+      <div class="card">
+        ${sorted.slice().reverse().slice(0,15).map(c => `
+          <div class="checkin-row">
+            <div>
+              <div class="checkin-date">${c.date}</div>
+              ${c.note ? `<div class="checkin-note">${esc(c.note)}</div>` : ''}
+            </div>
+            <div class="checkin-val" style="color:${col}">${c.value !== null && c.value !== undefined ? c.value : '✓'}${goal.unit?' '+esc(goal.unit):''}</div>
+          </div>
+        `).join('')}
+      </div>
+    ` : ''}
+
+    <div class="section-title">Vision Board</div>
+    <div class="vision-grid">
+      ${vision.map(v => `
+        <div class="vision-item">
+          <img src="${esc(v.imageUrl)}" alt="${esc(v.title)}" loading="lazy" onerror="this.parentElement.style.background='var(--surface2)'">
+          ${v.caption ? `<div class="vcaption">${esc(v.caption)}</div>` : ''}
+        </div>
+      `).join('')}
+      <button class="vision-add" onclick="openVisionSheet('${goal.id}')">
+        <span class="plus">＋</span><span>Add image</span>
+      </button>
+    </div>
+
+    <div class="divider"></div>
+    <button class="btn btn-danger" style="width:100%;margin-bottom:8px" onclick="archiveGoal('${goal.id}','${esc(goal.title)}')">Archive Goal</button>
+  `;
+
+  if (sorted.length > 1) {
+    requestAnimationFrame(() => {
+      const canvas = document.getElementById('goalChart');
+      if (!canvas) return;
+      if (chartInst) { chartInst.destroy(); }
+      chartInst = new Chart(canvas, {
+        type: 'line',
+        data: {
+          labels: sorted.map(c => c.date.slice(5)),
+          datasets: [{
+            data: sorted.map(c => c.value),
+            borderColor: col,
+            backgroundColor: col + '20',
+            tension: 0.35,
+            fill: true,
+            pointRadius: 4,
+            pointBackgroundColor: col,
+            pointBorderColor: 'transparent'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: '#777', font: { size: 10 } }, grid: { color: '#232323' } },
+            y: { ticks: { color: '#777', font: { size: 10 } }, grid: { color: '#232323' } }
+          }
+        }
+      });
+    });
+  }
+}
+
+function smartRow(lbl, val) {
+  if (!val) return '';
+  return `<div class="smart-row"><div class="smart-lbl">${lbl}</div><div class="smart-val">${esc(val)}</div></div>`;
+}
+
+// ─── AI Advice ─────────────────────────────────────────────────────────────
+async function loadAIAdvice(goalId) {
+  const sec = document.getElementById('aiSection');
+  if (!sec) return;
+  sec.innerHTML = `<div class="advice-loading"><div class="spinner"></div>Claude is analyzing your goal…</div>`;
+  try {
+    const goals = await getGoals();
+    const goal = goals.find(g => g.id === goalId);
+    const d = await api('POST', '/sg/ai-advice', { body: goal });
+    sec.innerHTML = `
+      <div class="advice-box"><div class="advice-text">${esc(d.advice)}</div></div>
+      <button class="btn btn-ghost btn-sm" style="margin-top:10px;width:100%" onclick="loadAIAdvice('${goalId}')">↻ New Advice</button>
+    `;
+    cache.goals = null; // invalidate so next load shows saved advice
+  } catch(e) {
+    sec.innerHTML = errBox('Could not get AI advice', `loadAIAdvice('${goalId}')`);
+  }
+}
+
+// ─── Archive ───────────────────────────────────────────────────────────────
+async function archiveGoal(id, title) {
+  if (!confirm(`Archive "${title}"?\n\nIt will be hidden from the app but still in Notion.`)) return;
+  try {
+    await api('POST', '/sg/goals/archive', { body: { id, status: 'Archived' } });
+    cache.goals = null;
+    showDashboard();
+  } catch(e) {
+    alert('Failed to archive. Try again.');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// NEW GOAL
+// ═══════════════════════════════════════════════════════════════════════════
+function showNewGoal() {
+  document.getElementById('view').innerHTML = `
+    <div class="header">
+      <button class="back-btn" onclick="showDashboard()">←</button>
+      <h1>New Goal</h1>
+    </div>
+    <div class="scroll">
+      <form id="goalForm" onsubmit="submitGoal(event)">
+        <div class="form-group">
+          <label>Goal Title *</label>
+          <input name="title" placeholder="e.g. Lose 10kg by summer" required autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label>Category *</label>
+          <select name="category">${CATS.map(c=>`<option>${c}</option>`).join('')}</select>
+        </div>
+        <div class="form-group">
+          <label>Specific — What exactly?</label>
+          <textarea name="specific" placeholder="Describe specifically what success looks like"></textarea>
+        </div>
+        <div class="row2">
+          <div class="form-group">
+            <label>Start Value *</label>
+            <input name="startValue" type="number" step="any" placeholder="0" required>
+          </div>
+          <div class="form-group">
+            <label>Target Value *</label>
+            <input name="targetValue" type="number" step="any" placeholder="100" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Unit</label>
+          <input name="unit" placeholder="kg, €, deals, %…">
+        </div>
+        <div class="form-group">
+          <label>Achievable — Why is this realistic?</label>
+          <textarea name="achievable" placeholder="Why can you achieve this?"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Relevant — Why does this matter?</label>
+          <textarea name="relevant" placeholder="Why is this important right now?"></textarea>
+        </div>
+        <div class="row2">
+          <div class="form-group">
+            <label>Start Date *</label>
+            <input name="startDate" type="date" value="${todayStr()}" required>
+          </div>
+          <div class="form-group">
+            <label>End Date *</label>
+            <input name="endDate" type="date" required>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary" id="goalSubmitBtn">Create Goal</button>
+      </form>
+    </div>
+  `;
+}
+
+async function submitGoal(e) {
+  e.preventDefault();
+  const btn = document.getElementById('goalSubmitBtn');
+  btn.disabled = true; btn.textContent = 'Creating…';
+  const d = Object.fromEntries(new FormData(e.target));
+  d.startValue = parseFloat(d.startValue);
+  d.targetValue = parseFloat(d.targetValue);
+  try {
+    await api('POST', '/sg/goals', { body: d });
+    cache.goals = null;
+    showDashboard();
+  } catch(err) {
+    btn.disabled = false; btn.textContent = 'Create Goal';
+    alert('Failed to create goal:\n\n' + err.message);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CHECK-IN SHEET
+// ═══════════════════════════════════════════════════════════════════════════
+function openCheckinSheet(goalId) {
+  const goal = (cache.goals||[]).find(g => g.id === goalId);
+  const unit = goal?.unit || '';
+  openSheet(`
+    <div class="sheet-handle"></div>
+    <h2>Log Check-in</h2>
+    <form onsubmit="submitCheckin(event,'${goalId}')">
+      <div class="form-group">
+        <label>Current Value${unit ? ' ('+esc(unit)+')' : ''} *</label>
+        <input name="value" type="number" step="any" placeholder="${goal?.targetValue||''}" required autofocus>
+      </div>
+      <div class="form-group">
+        <label>Note (optional)</label>
+        <textarea name="note" placeholder="How did it go?"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Date</label>
+        <input name="date" type="date" value="${todayStr()}">
+      </div>
+      <button type="submit" class="btn btn-primary" id="checkinBtn">Save Check-in</button>
+    </form>
+  `);
+}
+
+async function submitCheckin(e, goalId) {
+  e.preventDefault();
+  const btn = document.getElementById('checkinBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  const d = Object.fromEntries(new FormData(e.target));
+  d.goalId = goalId;
+  d.value = parseFloat(d.value);
+  try {
+    await api('POST', '/sg/checkins', { body: d });
+    delete cache.checkins[goalId];
+    closeSheet();
+    showGoalDetail(goalId);
+  } catch(err) {
+    btn.disabled = false; btn.textContent = 'Save Check-in';
+    alert('Failed to save:\n\n' + err.message);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// VISION SHEET
+// ═══════════════════════════════════════════════════════════════════════════
+function openVisionSheet(goalId) {
+  openSheet(`
+    <div class="sheet-handle"></div>
+    <h2>Add to Vision Board</h2>
+    <form onsubmit="submitVision(event,'${goalId}')">
+      <div class="form-group">
+        <label>Image URL *</label>
+        <input name="imageUrl" type="url" placeholder="https://…" required>
+      </div>
+      <div class="form-group">
+        <label>Title</label>
+        <input name="title" placeholder="Dream outcome">
+      </div>
+      <div class="form-group">
+        <label>Caption</label>
+        <input name="caption" placeholder="Why this represents your goal">
+      </div>
+      <button type="submit" class="btn btn-primary" id="visionBtn">Add Image</button>
+    </form>
+  `);
+}
+
+async function submitVision(e, goalId) {
+  e.preventDefault();
+  const btn = document.getElementById('visionBtn');
+  btn.disabled = true; btn.textContent = 'Adding…';
+  const d = Object.fromEntries(new FormData(e.target));
+  d.goalId = goalId;
+  d.sortOrder = (cache.visionBoard[goalId]||[]).length;
+  try {
+    await api('POST', '/sg/vision-board', { body: d });
+    delete cache.visionBoard[goalId];
+    closeSheet();
+    showGoalDetail(goalId);
+  } catch(err) {
+    btn.disabled = false; btn.textContent = 'Add Image';
+    alert('Failed to add image:\n\n' + err.message);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HABITS
+// ═══════════════════════════════════════════════════════════════════════════
+async function showHabits() {
+  document.getElementById('view').innerHTML = `
+    <div class="header">
+      <h1>🔁 Habits</h1>
+      <button class="icon-btn" onclick="shiftHabitDate(-1)">‹</button>
+      <span id="habitDateLbl" style="font-size:13px;font-weight:600;min-width:84px;text-align:center">${habitDate}</span>
+      <button class="icon-btn" onclick="shiftHabitDate(1)">›</button>
+    </div>
+    <div class="scroll" id="habitBody">${sk(3)}</div>
+    <button class="fab" onclick="showNewHabit()">+</button>
+  `;
+  loadHabits();
+}
+
+async function loadHabits() {
+  const el = document.getElementById('habitBody');
+  if (!el) return;
+  try {
+    const [habits, logs] = await Promise.all([getHabits(), getHabitLogs(habitDate)]);
+    renderHabits(habits, logs);
+  } catch(e) {
+    el.innerHTML = errBox('Could not load habits', 'loadHabits()');
+  }
+}
+
+function shiftHabitDate(d) {
+  const dt = new Date(habitDate);
+  dt.setDate(dt.getDate() + d);
+  const next = dt.toISOString().slice(0,10);
+  if (next > todayStr()) return;
+  habitDate = next;
+  const lbl = document.getElementById('habitDateLbl');
+  if (lbl) lbl.textContent = habitDate;
+  const el = document.getElementById('habitBody');
+  if (el) el.innerHTML = sk(3);
+  loadHabits();
+}
+
+function renderHabits(habits, logs) {
+  const el = document.getElementById('habitBody');
+  if (!el) return;
+  if (!habits.length) {
+    el.innerHTML = `<div class="empty"><div class="icon">🔁</div><p>No habits yet.<br>Tap + to build your first habit.</p></div>`;
+    return;
+  }
+  const logMap = {};
+  logs.forEach(l => { logMap[l.habitId] = l; });
+
+  // Build 7-day history dates
+  const days7 = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    days7.push(d.toISOString().slice(0,10));
+  }
+
+  el.innerHTML = `
+    <div class="card" id="habitChecks">
+      ${habits.map(h => {
+        const log = logMap[h.id];
+        const done = !!log?.completed;
+        const col = CAT_COLOR[h.category] || '#4f8ef7';
+        return `
+          <div class="habit-row" id="hrow-${h.id}">
+            <div class="habit-check ${done?'done':''}" onclick="toggleHabit('${h.id}',${done})">
+              ${done ? '✓' : ''}
+            </div>
+            <div class="habit-info">
+              <div class="habit-name">${esc(h.title)}</div>
+              <div class="habit-sub" style="color:${col}">${h.frequency} · ${h.category}</div>
+            </div>
+            <div class="streak-badge">🔥 ${h.streak||0}</div>
+          </div>`;
+      }).join('')}
+    </div>
+
+    <div class="section-title">7-Day History</div>
+    <div class="card">
+      ${habits.map(h => {
+        const col = CAT_COLOR[h.category] || '#4f8ef7';
+        return `
+          <div style="margin-bottom:14px">
+            <div style="font-size:13px;font-weight:600;margin-bottom:6px">${esc(h.title)}</div>
+            <div class="week-strip">
+              ${days7.map(d => {
+                const isHabitDate = d === habitDate;
+                const isToday = d === todayStr();
+                // For current selected date, use live log; for others we'd need historical data
+                const isDone = isHabitDate ? !!logMap[h.id]?.completed : false;
+                return `<div class="week-dot" style="background:${isDone?col:'var(--border)'};${isToday?`outline:2px solid ${col};outline-offset:2px`:''}"></div>`;
+              }).join('')}
+            </div>
+            <div class="week-labels">
+              ${days7.map(d => `<div class="week-lbl">${d.slice(8)}</div>`).join('')}
+            </div>
+          </div>`;
+      }).join('')}
+    </div>
+  `;
+}
+
+async function toggleHabit(habitId, currentlyDone) {
+  const checkEl = document.querySelector(`#hrow-${habitId} .habit-check`);
+  // Optimistic toggle
+  if (checkEl) {
+    if (currentlyDone) { checkEl.classList.remove('done'); checkEl.textContent = ''; }
+    else { checkEl.classList.add('done'); checkEl.textContent = '✓'; }
+  }
+  try {
+    await api('POST', '/sg/habit-logs', { body: {
+      habitId,
+      completed: !currentlyDone,
+      date: habitDate
+    }});
+    delete cache.habitLogs[habitDate];
+    // Reload silently to get fresh state
+    const [habits, logs] = await Promise.all([getHabits(), getHabitLogs(habitDate, true)]);
+    renderHabits(habits, logs);
+  } catch(e) {
+    // Revert optimistic
+    if (checkEl) {
+      if (currentlyDone) { checkEl.classList.add('done'); checkEl.textContent = '✓'; }
+      else { checkEl.classList.remove('done'); checkEl.textContent = ''; }
+    }
+    alert('Failed to save habit log.');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// NEW HABIT
+// ═══════════════════════════════════════════════════════════════════════════
+function showNewHabit() {
+  document.getElementById('view').innerHTML = `
+    <div class="header">
+      <button class="back-btn" onclick="showHabits()">←</button>
+      <h1>New Habit</h1>
+    </div>
+    <div class="scroll">
+      <form id="habitForm" onsubmit="submitHabit(event)">
+        <div class="form-group">
+          <label>Habit Name *</label>
+          <input name="title" placeholder="e.g. Morning run" required autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label>Category *</label>
+          <select name="category">${CATS.map(c=>`<option>${c}</option>`).join('')}</select>
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <textarea name="description" placeholder="What does completing this look like?"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Frequency *</label>
+          <select name="frequency">${FREQS.map(f=>`<option>${f}</option>`).join('')}</select>
+        </div>
+        <div class="row2">
+          <div class="form-group">
+            <label>Target Value</label>
+            <input name="targetValue" type="number" step="any" placeholder="5">
+          </div>
+          <div class="form-group">
+            <label>Unit</label>
+            <input name="unit" placeholder="km, pages…">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Start Date *</label>
+          <input name="startDate" type="date" value="${todayStr()}" required>
+        </div>
+        <button type="submit" class="btn btn-primary" id="habitSubmitBtn">Create Habit</button>
+      </form>
+    </div>
+  `;
+}
+
+async function submitHabit(e) {
+  e.preventDefault();
+  const btn = document.getElementById('habitSubmitBtn');
+  btn.disabled = true; btn.textContent = 'Creating…';
+  const d = Object.fromEntries(new FormData(e.target));
+  if (d.targetValue) d.targetValue = parseFloat(d.targetValue);
+  try {
+    await api('POST', '/sg/habits', { body: d });
+    cache.habits = null;
+    showHabits();
+  } catch(err) {
+    btn.disabled = false; btn.textContent = 'Create Habit';
+    alert('Failed to create habit:\n\n' + err.message);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SHEET UTILS
+// ═══════════════════════════════════════════════════════════════════════════
+function openSheet(html) {
+  const sheet = document.getElementById('sheet');
+  const overlay = document.getElementById('overlay');
+  sheet.innerHTML = html;
+  requestAnimationFrame(() => {
+    sheet.classList.add('open');
+    overlay.classList.add('open');
+  });
+  document.body.style.overflow = 'hidden';
+}
+
+function closeSheet() {
+  document.getElementById('sheet').classList.remove('open');
+  document.getElementById('overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════════════════════════════════
+showDashboard();
+</script>
+</body>
+</html>
