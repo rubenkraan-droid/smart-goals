@@ -233,15 +233,24 @@ async function getGoals(force) {
 
 async function getCheckins(goalId, force) {
   if (!force && cache.checkins[goalId]) return cache.checkins[goalId];
+  // Use localStorage if available — skip Notion fetch
+  if (!force) {
+    const stored = localStorage.getItem(`ci_${goalId}`);
+    if (stored) { cache.checkins[goalId] = JSON.parse(stored); return cache.checkins[goalId]; }
+  }
   const d = await api('GET', `/sg/checkins?goalId=${goalId}`);
   cache.checkins[goalId] = (d.checkins || []).filter(c => {
     if (!c.goalId) return false;
     return c.goalId.replace(/-/g,'') === goalId.replace(/-/g,'');
   });
-  // Persist latest value so it survives page reload
-  const sorted = [...cache.checkins[goalId]].sort((a,b) => a.date < b.date ? -1 : 1);
-  if (sorted.length) localStorage.setItem(`lv_${goalId}`, sorted[sorted.length-1].value);
+  _saveCheckins(goalId);
   return cache.checkins[goalId];
+}
+
+function _saveCheckins(goalId) {
+  const sorted = [...cache.checkins[goalId]].sort((a,b) => a.date < b.date ? -1 : 1);
+  localStorage.setItem(`ci_${goalId}`, JSON.stringify(sorted));
+  if (sorted.length) localStorage.setItem(`lv_${goalId}`, sorted[sorted.length-1].value);
 }
 
 async function getHabits(force) {
@@ -710,8 +719,10 @@ async function submitCheckin(e, goalId) {
   d.value = parseFloat(d.value);
   try {
     await api('POST', '/sg/checkins', { body: d });
-    localStorage.setItem(`lv_${goalId}`, d.value);
-    delete cache.checkins[goalId];
+    // Add to local cache and persist — no re-fetch needed
+    if (!cache.checkins[goalId]) cache.checkins[goalId] = [];
+    cache.checkins[goalId].push({ goalId, value: d.value, date: d.date || todayStr(), note: d.note || '' });
+    _saveCheckins(goalId);
     closeSheet();
     showGoalDetail(goalId);
   } catch(err) {
