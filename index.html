@@ -516,6 +516,17 @@ function renderDetail(goal, checkins, vision) {
       const canvas = document.getElementById('goalChart');
       if (!canvas) return;
       if (chartInst) { chartInst.destroy(); }
+      // Linear regression trendline
+      const n = sorted.length;
+      const trendData = (() => {
+        if (n < 2) return [];
+        const xs = sorted.map((_, i) => i);
+        const ys = sorted.map(c => c.value);
+        const mx = xs.reduce((a,b)=>a+b,0)/n, my = ys.reduce((a,b)=>a+b,0)/n;
+        const slope = xs.reduce((s,x,i)=>s+(x-mx)*(ys[i]-my),0) / xs.reduce((s,x)=>s+(x-mx)**2,0);
+        const intercept = my - slope * mx;
+        return xs.map(x => Math.round((slope*x+intercept)*10)/10);
+      })();
       chartInst = new Chart(canvas, {
         type: 'line',
         data: {
@@ -529,6 +540,14 @@ function renderDetail(goal, checkins, vision) {
             pointRadius: 4,
             pointBackgroundColor: col,
             pointBorderColor: 'transparent'
+          }, {
+            data: trendData,
+            borderColor: col + '88',
+            borderDash: [5, 4],
+            borderWidth: 1.5,
+            pointRadius: 0,
+            fill: false,
+            tension: 0
           }]
         },
         options: {
@@ -868,8 +887,11 @@ async function toggleHabit(habitId, currentlyDone) {
       completed: !currentlyDone,
       date: habitDate
     }});
-    delete cache.habitLogs[habitDate];
-    const logs = await getHabitLogs(habitDate, true);
+    // Update cache directly — no re-fetch needed
+    const logs = cache.habitLogs[habitDate] = cache.habitLogs[habitDate] || [];
+    const existing = logs.find(l => l.habitId === habitId);
+    if (existing) existing.completed = !currentlyDone;
+    else logs.push({ habitId, completed: !currentlyDone, date: habitDate });
     renderHabits(cache.habits || [], logs);
   } catch(e) {
     // Revert optimistic
