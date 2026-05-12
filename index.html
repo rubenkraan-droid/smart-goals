@@ -234,7 +234,11 @@ async function getGoals(force) {
 async function getCheckins(goalId, force) {
   if (!force && cache.checkins[goalId]) return cache.checkins[goalId];
   const d = await api('GET', `/sg/checkins?goalId=${goalId}`);
-  cache.checkins[goalId] = d.checkins || [];
+  console.log('[checkins]', goalId, d.checkins?.map(c => ({id:c.id,goalId:c.goalId,value:c.value})));
+  cache.checkins[goalId] = (d.checkins || []).filter(c => {
+    if (!c.goalId) return false;
+    return c.goalId.replace(/-/g,'') === goalId.replace(/-/g,'');
+  });
   // Persist latest value so it survives page reload
   const sorted = [...cache.checkins[goalId]].sort((a,b) => a.date < b.date ? -1 : 1);
   if (sorted.length) localStorage.setItem(`lv_${goalId}`, sorted[sorted.length-1].value);
