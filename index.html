@@ -228,12 +228,18 @@ async function getGoals(force) {
   if (!force && cache.goals) return cache.goals;
   if (!force) {
     const s = localStorage.getItem('goals');
-    if (s) { cache.goals = JSON.parse(s); return cache.goals; }
+    const age = Date.now() - (parseInt(localStorage.getItem('goals_t')) || 0);
+    if (s && age < 3600000) { cache.goals = JSON.parse(s); return cache.goals; }
   }
   const d = await api('GET', '/sg/goals');
   cache.goals = (d.goals || []).filter(g => g.status !== 'Archived');
-  localStorage.setItem('goals', JSON.stringify(cache.goals));
+  _saveGoals();
   return cache.goals;
+}
+
+function _saveGoals() {
+  localStorage.setItem('goals', JSON.stringify(cache.goals));
+  localStorage.setItem('goals_t', Date.now().toString());
 }
 
 async function getCheckins(goalId, force) {
@@ -619,6 +625,7 @@ async function archiveGoal(id, title) {
     await getGoals(); // ensure cache is populated before we modify it
     await api('POST', '/sg/goals/archive', { body: { id, status: 'Archived' } });
     cache.goals = (cache.goals || []).filter(g => g.id !== id);
+    _saveGoals();
     showDashboard();
   } catch(e) {
     alert('Failed to archive. Try again.');
@@ -695,6 +702,8 @@ async function submitGoal(e) {
   d.targetValue = parseFloat(d.targetValue);
   try {
     await api('POST', '/sg/goals', { body: d });
+    localStorage.removeItem('goals');
+    localStorage.removeItem('goals_t');
     cache.goals = null;
     showDashboard();
   } catch(err) {
