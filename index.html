@@ -218,12 +218,10 @@ async function api(method, path, data) {
   const opts = { method, headers: { 'Content-Type': 'application/json' } };
   if (data) opts.body = JSON.stringify(data);
   const res = await fetch(BASE + path, opts);
-  if (!res.ok) {
-    let body = '';
-    try { body = await res.text(); } catch(e) {}
-    throw new Error(`HTTP ${res.status} — ${body.slice(0, 300)}`);
-  }
-  return res.json();
+  const text = await res.text();
+  if (!res.ok) throw new Error(`HTTP ${res.status} — ${text.slice(0, 300)}`);
+  if (!text.trim()) throw new Error('Empty response from n8n — workflow may have errored before Respond node');
+  try { return JSON.parse(text); } catch(e) { throw new Error('Invalid JSON from server: ' + text.slice(0, 200)); }
 }
 
 async function getGoals(force) {
