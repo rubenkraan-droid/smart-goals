@@ -226,8 +226,13 @@ async function api(method, path, data) {
 
 async function getGoals(force) {
   if (!force && cache.goals) return cache.goals;
+  if (!force) {
+    const s = localStorage.getItem('goals');
+    if (s) { cache.goals = JSON.parse(s); return cache.goals; }
+  }
   const d = await api('GET', '/sg/goals');
   cache.goals = (d.goals || []).filter(g => g.status !== 'Archived');
+  localStorage.setItem('goals', JSON.stringify(cache.goals));
   return cache.goals;
 }
 
@@ -255,8 +260,13 @@ function _saveCheckins(goalId) {
 
 async function getHabits(force) {
   if (!force && cache.habits) return cache.habits;
+  if (!force) {
+    const s = localStorage.getItem('habits');
+    if (s) { cache.habits = JSON.parse(s); return cache.habits; }
+  }
   const d = await api('GET', '/sg/habits');
   cache.habits = (d.habits || []).filter(h => h.status !== 'Archived');
+  localStorage.setItem('habits', JSON.stringify(cache.habits));
   return cache.habits;
 }
 
@@ -275,8 +285,13 @@ async function archiveHabit(id, title) {
 
 async function getHabitLogs(date, force) {
   if (!force && cache.habitLogs[date]) return cache.habitLogs[date];
+  if (!force) {
+    const s = localStorage.getItem(`hl_${date}`);
+    if (s) { cache.habitLogs[date] = JSON.parse(s); return cache.habitLogs[date]; }
+  }
   const d = await api('GET', `/sg/habit-logs?date=${date}`);
   cache.habitLogs[date] = d.logs || [];
+  localStorage.setItem(`hl_${date}`, JSON.stringify(cache.habitLogs[date]));
   return cache.habitLogs[date];
 }
 
