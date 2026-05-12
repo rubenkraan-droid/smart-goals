@@ -550,7 +550,7 @@ async function archiveGoal(id, title) {
   if (!confirm(`Archive "${title}"?\n\nIt will be hidden from the app but still in Notion.`)) return;
   try {
     await api('POST', '/sg/goals/archive', { body: { id, status: 'Archived' } });
-    cache.goals = null;
+    if (cache.goals) cache.goals = cache.goals.filter(g => g.id !== id);
     showDashboard();
   } catch(e) {
     alert('Failed to archive. Try again.');
