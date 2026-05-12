@@ -234,7 +234,8 @@ async function getGoals(force) {
 async function getCheckins(goalId, force) {
   if (!force && cache.checkins[goalId]) return cache.checkins[goalId];
   const d = await api('GET', `/sg/checkins?goalId=${goalId}`);
-  cache.checkins[goalId] = (d.checkins || []).filter(c => c.goalId === goalId);
+  const norm = goalId.replace(/-/g, '');
+  cache.checkins[goalId] = (d.checkins || []).filter(c => c.goalId.replace(/-/g, '') === norm);
   return cache.checkins[goalId];
 }
 
