@@ -227,14 +227,14 @@ async function api(method, path, data) {
 async function getGoals(force) {
   if (!force && cache.goals) return cache.goals;
   const d = await api('GET', '/sg/goals');
-  cache.goals = d.goals || [];
+  cache.goals = (d.goals || []).filter(g => g.status !== 'Archived');
   return cache.goals;
 }
 
 async function getCheckins(goalId, force) {
   if (!force && cache.checkins[goalId]) return cache.checkins[goalId];
   const d = await api('GET', `/sg/checkins?goalId=${goalId}`);
-  cache.checkins[goalId] = d.checkins || [];
+  cache.checkins[goalId] = (d.checkins || []).filter(c => c.goalId === goalId);
   return cache.checkins[goalId];
 }
 
@@ -549,8 +549,9 @@ async function loadAIAdvice(goalId) {
 async function archiveGoal(id, title) {
   if (!confirm(`Archive "${title}"?\n\nIt will be hidden from the app but still in Notion.`)) return;
   try {
+    await getGoals(); // ensure cache is populated before we modify it
     await api('POST', '/sg/goals/archive', { body: { id, status: 'Archived' } });
-    if (cache.goals) cache.goals = cache.goals.filter(g => g.id !== id);
+    cache.goals = (cache.goals || []).filter(g => g.id !== id);
     showDashboard();
   } catch(e) {
     alert('Failed to archive. Try again.');
