@@ -247,8 +247,21 @@ async function getCheckins(goalId, force) {
 async function getHabits(force) {
   if (!force && cache.habits) return cache.habits;
   const d = await api('GET', '/sg/habits');
-  cache.habits = d.habits || [];
+  cache.habits = (d.habits || []).filter(h => h.status !== 'Archived');
   return cache.habits;
+}
+
+async function archiveHabit(id, title) {
+  if (!confirm(`Archive "${title}"?\n\nIt will be hidden from the app but still in Notion.`)) return;
+  try {
+    await getHabits();
+    await api('POST', '/sg/habits/archive', { body: { id } });
+    cache.habits = (cache.habits || []).filter(h => h.id !== id);
+    const [habits, logs] = await Promise.all([getHabits(), getHabitLogs(habitDate)]);
+    renderHabits(habits, logs);
+  } catch(e) {
+    alert('Failed to archive. Try again.');
+  }
 }
 
 async function getHabitLogs(date, force) {
@@ -807,9 +820,12 @@ function renderHabits(habits, logs) {
             </div>
             <div class="habit-info">
               <div class="habit-name">${esc(h.title)}</div>
-              <div class="habit-sub" style="color:${col}">${h.frequency} · ${h.category}</div>
+              <div class="habit-sub" style="color:${col}">${h.frequency} · ${h.category}${h.targetValue ? ` · ${h.targetValue}${h.unit ? ' '+esc(h.unit) : ''}` : ''}</div>
             </div>
-            <div class="streak-badge">🔥 ${h.streak||0}</div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div class="streak-badge">🔥 ${h.streak||0}</div>
+              <button onclick="archiveHabit('${h.id}','${esc(h.title)}')" style="background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:4px" title="Archive">×</button>
+            </div>
           </div>`;
       }).join('')}
     </div>
