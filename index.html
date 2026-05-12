@@ -869,9 +869,8 @@ async function toggleHabit(habitId, currentlyDone) {
       date: habitDate
     }});
     delete cache.habitLogs[habitDate];
-    // Reload silently to get fresh state
-    const [habits, logs] = await Promise.all([getHabits(), getHabitLogs(habitDate, true)]);
-    renderHabits(habits, logs);
+    const logs = await getHabitLogs(habitDate, true);
+    renderHabits(cache.habits || [], logs);
   } catch(e) {
     // Revert optimistic
     if (checkEl) {
